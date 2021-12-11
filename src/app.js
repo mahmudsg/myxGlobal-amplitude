@@ -5,8 +5,22 @@ if (typeof utm_params === undefined) {
 }
 
 // common var
-var paramPageLoad = Object.assign({ pageTitle: document.title }, utm_params);
+var paramPageLoad = Object.assign({}, utm_params);
 var isLoggedIn = document.querySelector("body.logged-in");
+var mL = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
 
 var metaPostTitle = document.title.replace(" - MYX Global", "");
 var metaPostID = document.querySelector('meta[name="post:id"]')
@@ -26,7 +40,7 @@ var metaPostMDate = document.querySelector(
 	? document.querySelector('meta[property="article:modified_time"]').content
 	: null;
 
-var mainMenu = document.getElementById("#menu-main-menu-1");
+var mainMenu = document.getElementById("menu-main-menu-1");
 var currentMenuItem = null;
 var currentMenuItemTxt = null;
 var currentMenuItemParent = null;
@@ -37,7 +51,7 @@ if (mainMenu !== null) {
 	);
 	if (currentMenuItem !== null) {
 		currentMenuItemTxt = currentMenuItem.querySelector("a")
-			? currentMenuItem.querySelector("a").innerText
+			? currentMenuItem.querySelector("a").textContent
 			: null;
 	}
 
@@ -46,7 +60,7 @@ if (mainMenu !== null) {
 	);
 	if (currentMenuItemParent !== null) {
 		currentMenuItemParentTxt = currentMenuItemParent.querySelector("a")
-			? currentMenuItemParent.querySelector("a").innerText
+			? currentMenuItemParent.querySelector("a").textContent
 			: null;
 	}
 }
@@ -59,7 +73,11 @@ var eventType = null;
 
 var sectionPageRender = null;
 
-if (location.pathname === "/") {
+if (location.search.indexOf("?s=") >= 0) {
+	//search page
+	eventType = "searchPageRender";
+	paramPageLoad.keyword = location.search.replace("?s=", "");
+} else if (location.pathname === "/") {
 	// home page
 	eventType = "homePageRender";
 } else if (location.pathname === "/registration/") {
@@ -88,6 +106,22 @@ if (location.pathname === "/") {
 				".gtm.chartPageRender.current_page_item"
 			);
 			if (chartPageRender !== null) {
+				let pageTitle = document.querySelector("h1").textContent;
+				pageTitle = pageTitle.substring(
+					pageTitle.indexOf("(") + 1,
+					pageTitle.indexOf(")")
+				);
+				chartData = pageTitle.split(" ");
+				if (chartData.length) {
+					paramPageLoad.hitChartMonth = mL.find((month, monthNum) =>
+						month.toLowerCase() === chartData[0].toLowerCase()
+							? monthNum
+							: null
+					);
+					paramPageLoad.hitChartDate = chartData[1];
+					paramPageLoad.hitChartYear = chartData[2];
+				}
+
 				// chart pages
 				eventType = "chartPageRender";
 				paramPageLoad.chartTitle = currentMenuItemTxt;
@@ -106,89 +140,337 @@ if (location.pathname === "/") {
 						7
 					);
 					paramPageLoad.publishedYear = metaPostMDate.substring(0, 4);
+					paramPageLoad.subSectionName = currentMenuItemTxt;
 				} else {
 				}
 			}
 		}
 	}
 }
-console.log({
-	event: "logEvent",
-	eventType: eventType,
-	eventProperties: paramPageLoad,
-});
 
-// ===== Clicks events
-var allSecItems = document.querySelectorAll("#menu-main-menu-1 .gtm");
+if (eventType !== null) {
+	dataLayer.push({
+		event: "logEvent",
+		eventType: eventType,
+		eventProperties: paramPageLoad,
+	});
+}
+
+var params = {};
+// ===== Clicks events - sections
+var allSecItems = document.querySelectorAll("#menu-main-menu-1 .gtm>a");
 if (allSecItems.length) {
 	allSecItems.forEach((item) => {
 		item.addEventListener("click", (event) => {
-			let itemInnerTxt = item.querySelector("a")
-				? item.querySelector("a").innerText
-				: null;
+			// clear previous event
+			params = Object.assign({}, utm_params);
 
-			if (item.classList.contains("sectionPageRender")) {
-				eventType = "sectionClick";
-				paramPageLoad.navName = itemInnerTxt;
-				paramPageLoad.context = "Nav Bar";
-			} else if (item.classList.contains("subSectionPageRender")) {
-				eventType = "subSectionClick";
-				paramPageLoad.navName = itemInnerTxt;
-				paramPageLoad.context = "Nav Bar";
-			} else if (item.classList.contains("chartPageRender")) {
-				eventType = "chartNavClick";
-				paramPageLoad.chartTitle = itemInnerTxt;
-				paramPageLoad.context = "Nav Bar";
+			let itemParent = item.closest("li");
+			let itemSParent = itemParent.closest(".menu-item-has-children");
+			let itemSParentTxt = null;
+			if (itemSParent !== null) {
+				itemSParentTxt = itemSParent.querySelector("a").textContent;
 			}
 
-			console.log({
+			let itemInnerTxt = item.textContent;
+
+			if (itemParent.classList.contains("sectionPageRender")) {
+				eventType = "sectionClick";
+				params.navName = itemInnerTxt;
+				params.context = "Nav Bar";
+			} else if (itemParent.classList.contains("subSectionPageRender")) {
+				eventType = "subSectionClick";
+				params.navParent = itemSParentTxt;
+				params.navName = itemInnerTxt;
+				params.context = "Nav Bar";
+			} else if (itemParent.classList.contains("chartPageRender")) {
+				eventType = "chartNavClick";
+				params.chartTitle = itemInnerTxt;
+				params.context = "Nav Bar";
+			}
+
+			dataLayer.push({
+				eventProperties: undefined,
+			});
+
+			dataLayer.push({
 				event: "logEvent",
 				eventType: eventType,
-				eventProperties: paramPageLoad,
+				eventProperties: params,
 			});
 		});
 	});
 }
 
-/* switch (location.pathname) {
-	case "/":
-		eventType = "homePageRender";
-		break;
-	case "/registration/":
-		eventType = "registrationPageRender";
-		break;
-	case sectionPageRender.find((x) => x == location.pathname):
-		eventType = "sectionPageRender";
-		paramPageLoad.sectionName = currentMenuItemTxt;
-		break;
-	case "/vote-myx-awards/":
-		var alreadyVote = document.querySelector("#jkTime");
-		if (isLoggedIn === null) {
-			eventType = "awardsLoginPageRender";
-		} else {
-			if (alreadyVote !== null) {
-				eventType = "votingLimitPageRender";
-			} else {
-				eventType = "awardsVotePageRender";
+// ===== Clicks events - post articleIntent
+var articles = document.querySelectorAll(".oxy-post a");
+let post = null;
+if (articles.length) {
+	articles.forEach((a) =>
+		a.addEventListener("click", (event) => {
+			params = Object.assign({}, utm_params);
+
+			post = a.closest(".oxy-post");
+			params.articleTitle = post.querySelector(".oxy-post-title")
+				? post.querySelector(".oxy-post-title").innerText
+				: null;
+			params.destinationUrl = a.getAttribute("href");
+			// where clicked
+			if (a.classList.contains("oxy-post-title")) {
+				params.clickedElement = "title";
+			} else if (a.classList.contains("oxy-post-image")) {
+				params.clickedElement = "thumbnail";
+			} else if (a.classList.contains("oxy-read-more")) {
+				params.clickedElement = "read more";
 			}
+
+			// section location
+			params.context = currentMenuItemTxt;
+
+			dataLayer.push({
+				eventProperties: undefined,
+			});
+
+			dataLayer.push({
+				event: "logEvent",
+				eventType: "articleIntent",
+				eventProperties: params,
+			});
+		})
+	);
+}
+
+// ===== Clicks events - search
+var siteSearchIcon = document.getElementById("fancy_icon-220-12");
+if (siteSearchIcon !== null) {
+	siteSearchIcon.addEventListener("click", (event) => {
+		params = Object.assign({}, utm_params);
+
+		if (location.search.indexOf("?s=") === 0) {
+			params.context = "Search page";
+		} else {
+			params.context = "Nav Bar";
 		}
-		break;
-	case "/vote-thank-you/":
-		eventType = "successfulVotePageRender";
-		break;
-	default:
-		eventType = "otherPageRender";
-		break;
-} */
-if (eventType !== null) {
-	/* dataLayer.push({
-		event: "logEvent",
-		eventType: eventType,
-		eventProperties: paramPageLoad,
+
+		dataLayer.push({
+			eventProperties: undefined,
+		});
+
+		dataLayer.push({
+			event: "logEvent",
+			eventType: "searchClick",
+			eventProperties: params,
+		});
 	});
-	console.log({
-		event: "logEvent",
-		eventType: eventType,
-		eventProperties: paramPageLoad,
-	});  */
+}
+
+// ===== Clicks events - vote
+var voteClick = document.getElementById("_toggle-171-12");
+if (voteClick !== null) {
+	voteClick.addEventListener("click", (event) => {
+		params = Object.assign({}, utm_params);
+
+		if (currentMenuItemParentTxt !== null) {
+			params.sectionName = currentMenuItemParentTxt;
+			params.subSectionName = currentMenuItemTxt;
+		} else {
+			params.sectionName = currentMenuItemTxt;
+		}
+
+		dataLayer.push({
+			eventProperties: undefined,
+		});
+
+		dataLayer.push({
+			event: "logEvent",
+			eventType: "voteClick",
+			eventProperties: params,
+		});
+	});
+}
+
+// ===== Clicks events - registration
+var regLinks = document.querySelectorAll('a[href*="/registration/"');
+if (regLinks.length) {
+	regLinks.forEach((item) => {
+		item.addEventListener("click", (event) => {
+			params = Object.assign({}, utm_params);
+
+			params.destinationUrl = "https://myx.global/registration/";
+
+			dataLayer.push({
+				eventProperties: undefined,
+			});
+
+			dataLayer.push({
+				event: "logEvent",
+				eventType: "registrationClick",
+				eventProperties: params,
+			});
+		});
+	});
+}
+
+// ===== Submit events - search form
+var searchForms = document.querySelectorAll(".searchform");
+if (searchForms.length) {
+	searchForms.forEach((item) => {
+		item.addEventListener("submit", function (event) {
+			params = Object.assign({}, utm_params);
+
+			let searchKey = item.querySelector("#s").value;
+			params.keyword = searchKey;
+
+			dataLayer.push({
+				eventProperties: undefined,
+			});
+
+			dataLayer.push({
+				event: "logEvent",
+				eventType: "searchSubmit",
+				eventProperties: params,
+			});
+			return false;
+		});
+	});
+}
+
+// ===== Submit events - login form
+var loginForm = document.getElementById("loginform");
+if (loginForm !== null) {
+	console.log("login form loaded");
+	loginForm.addEventListener("submit", function (event) {
+		params = Object.assign({}, utm_params);
+
+		dataLayer.push({
+			eventProperties: undefined,
+		});
+
+		dataLayer.push({
+			event: "logEvent",
+			eventType: "loginSubmit",
+			eventProperties: params,
+		});
+		return false;
+	});
+}
+// ===== Submit events - vote form
+var voteForm = document.getElementById("form_vote8e2655ef18");
+if (voteForm !== null) {
+	voteForm.addEventListener("submit", function (event) {
+		params = Object.assign({}, utm_params);
+
+		dataLayer.push({
+			eventProperties: undefined,
+		});
+
+		dataLayer.push({
+			event: "logEvent",
+			eventType: "voteTop10Submit",
+			eventProperties: params,
+		});
+		return false;
+	});
+}
+
+// ===== Registration button
+var regButton = document.querySelector(
+	"#frm_form_38_container .frm_button_submit"
+);
+if (regButton !== null && location.pathname === "/registration/") {
+	regButton.addEventListener("click", function () {
+		var bithday = document.querySelector("#field_qyuwh");
+		var gender = document.querySelector("#field_5prme");
+
+		if (bithday === null || bithday.value === "") {
+			bithday = "not provided";
+		} else {
+			bithday = bithday.value;
+		}
+		if (gender === null || gender.value === "") {
+			gender = "not provided";
+		} else {
+			gender = gender.value;
+		}
+		var params = Object.assign(
+			{ birthYear: bithday, gender: gender },
+			utm_params
+		);
+
+		dataLayer.push({
+			eventProperties: undefined,
+		});
+
+		dataLayer.push({
+			event: "logEvent",
+			eventType: "registrationSubmit",
+			eventProperties: params,
+		});
+
+		dataLayer.push({
+			event: "setUserProperties",
+			userProperties: { birthYear: bithday, gender: gender },
+		});
+	});
+}
+
+var regForm = document.getElementById("form_user-registration");
+if (regForm !== null) {
+	regForm.addEventListener("submit", (event) => {
+		var fName = document.querySelector("#field_o69jd");
+		var lName = document.querySelector("#field_l3dkc");
+		var username = document.querySelector("#field_xyrs9");
+		var eMail = document.querySelector("#field_qulq1");
+		var pass = document.querySelector("#field_1abwj");
+
+		var bithday = document.querySelector("#field_qyuwh");
+		var gender = document.querySelector("#field_5prme");
+
+		var check1 = document.querySelector("#field_40j5n-0").checked;
+		var check2 = document.querySelector("#field_nw83y-0").checked;
+
+		if (
+			check1 &&
+			check2 &&
+			fName !== null &&
+			fName.value !== "" &&
+			lName !== null &&
+			lName.value !== "" &&
+			username !== null &&
+			username.value !== "" &&
+			eMail !== null &&
+			eMail.value !== "" &&
+			pass !== null &&
+			pass.value !== ""
+		) {
+			console.log("inside xxxx 2");
+			if (bithday === null || bithday.value === "") {
+				bithday = "not provided";
+			} else {
+				bithday = bithday.value;
+			}
+			if (gender === null || gender.value === "") {
+				gender = "not provided";
+			} else {
+				gender = gender.value;
+			}
+
+			params = Object.assign(
+				{ birthYear: bithday, gender: gender },
+				utm_params
+			);
+
+			dataLayer.push({
+				eventProperties: undefined,
+			});
+
+			dataLayer.push({
+				event: "logEvent",
+				eventType: "registrationSubmit",
+				eventProperties: params,
+			});
+		}
+
+		return false;
+	});
 }
