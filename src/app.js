@@ -106,19 +106,29 @@ if (location.search.indexOf("?s=") >= 0) {
 				".gtm.chartPageRender.current_page_item"
 			);
 			if (chartPageRender !== null) {
-				let pageTitle = document.querySelector("h1").textContent;
+				let pageTitle = document
+					.querySelector("h1")
+					.textContent.replace(",", "");
+				let hitChartMonth = null;
 				pageTitle = pageTitle.substring(
 					pageTitle.indexOf("(") + 1,
 					pageTitle.indexOf(")")
 				);
 				chartData = pageTitle.split(" ");
 				if (chartData.length) {
-					paramPageLoad.hitChartMonth = mL.find((month, monthNum) =>
-						month.toLowerCase() === chartData[0].toLowerCase()
-							? monthNum
-							: null
+					hitChartMonth = parseInt(
+						mL.findIndex(
+							(month) =>
+								month.toLowerCase() ===
+								chartData[0].toLowerCase()
+						) + 1
 					);
+
 					paramPageLoad.hitChartDate = chartData[1];
+					paramPageLoad.hitChartMonth =
+						hitChartMonth !== null
+							? hitChartMonth.toString()
+							: undefined;
 					paramPageLoad.hitChartYear = chartData[2];
 				}
 
@@ -374,7 +384,7 @@ if (voteForm !== null) {
 }
 
 // ===== Registration button
-var regButton = document.querySelector(
+/* var regButton = document.querySelector(
 	"#frm_form_38_container .frm_button_submit"
 );
 if (regButton !== null && location.pathname === "/registration/") {
@@ -392,10 +402,11 @@ if (regButton !== null && location.pathname === "/registration/") {
 		} else {
 			gender = gender.value;
 		}
-		var params = Object.assign(
-			{ birthYear: bithday, gender: gender },
-			utm_params
-		);
+		// var params = Object.assign(
+		// 	{ birthYear: bithday, gender: gender },
+		// 	utm_params
+		// );
+		var params = Object.assign({}, utm_params);
 
 		dataLayer.push({
 			eventProperties: undefined,
@@ -412,7 +423,7 @@ if (regButton !== null && location.pathname === "/registration/") {
 			userProperties: { birthYear: bithday, gender: gender },
 		});
 	});
-}
+} */
 
 var regForm = document.getElementById("form_user-registration");
 if (regForm !== null) {
@@ -443,7 +454,6 @@ if (regForm !== null) {
 			pass !== null &&
 			pass.value !== ""
 		) {
-			console.log("inside xxxx 2");
 			if (bithday === null || bithday.value === "") {
 				bithday = "not provided";
 			} else {
@@ -455,10 +465,11 @@ if (regForm !== null) {
 				gender = gender.value;
 			}
 
-			params = Object.assign(
+			/* var params = Object.assign(
 				{ birthYear: bithday, gender: gender },
 				utm_params
-			);
+			); */
+			var params = Object.assign({}, utm_params);
 
 			dataLayer.push({
 				eventProperties: undefined,
@@ -468,6 +479,11 @@ if (regForm !== null) {
 				event: "logEvent",
 				eventType: "registrationSubmit",
 				eventProperties: params,
+			});
+
+			dataLayer.push({
+				event: "setUserProperties",
+				userProperties: { birthYear: bithday, gender: gender },
 			});
 		}
 
