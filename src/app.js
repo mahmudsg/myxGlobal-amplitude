@@ -77,13 +77,25 @@ if (location.search.indexOf("?s=") >= 0) {
 	//search page
 	eventType = "searchPageRender";
 	paramPageLoad.keyword = location.search.replace("?s=", "");
+	paramPageLoad.originUrl = document.referrer;
+	paramPageLoad.pageUrl = location.href;
+
+	paramPageLoad.url = null;
+	paramPageLoad.referrerURL = null;
 } else if (location.pathname === "/") {
 	// home page
 	eventType = "homePageRender";
+
+	paramPageLoad.url = null;
+	paramPageLoad.referrerURL = null;
 } else if (location.pathname === "/registration/") {
 	// reg page
 	eventType = "registrationPageRender";
 	paramPageLoad.destinationUrl = "https://myx.global/registration/";
+	paramPageLoad.originUrl = document.referrer;
+
+	paramPageLoad.url = null;
+	paramPageLoad.referrerURL = null;
 } else {
 	sectionPageRender = document.querySelector(
 		".gtm.sectionPageRender.current_page_item"
@@ -92,6 +104,9 @@ if (location.search.indexOf("?s=") >= 0) {
 		// section pages
 		eventType = "sectionPageRender";
 		paramPageLoad.sectionName = currentMenuItemTxt;
+		paramPageLoad.pageUrl = location.href;
+		paramPageLoad.url = null;
+		paramPageLoad.referrerURL = null;
 	} else {
 		subSectionPageRender = document.querySelector(
 			".gtm.subSectionPageRender.current_page_item"
@@ -101,6 +116,9 @@ if (location.search.indexOf("?s=") >= 0) {
 			eventType = "subSectionPageRender";
 			paramPageLoad.sectionName = currentMenuItemParentTxt;
 			paramPageLoad.subSectionName = currentMenuItemTxt;
+			paramPageLoad.pageUrl = location.href;
+			paramPageLoad.url = null;
+			paramPageLoad.referrerURL = null;
 		} else {
 			chartPageRender = document.querySelector(
 				".gtm.chartPageRender.current_page_item"
@@ -178,6 +196,7 @@ if (allSecItems.length) {
 			let itemParent = item.closest("li");
 			let itemSParent = itemParent.closest(".menu-item-has-children");
 			let itemSParentTxt = null;
+			let href = item.getAttribute("href");
 			if (itemSParent !== null) {
 				itemSParentTxt = itemSParent.querySelector("a").textContent;
 			}
@@ -188,15 +207,30 @@ if (allSecItems.length) {
 				eventType = "sectionClick";
 				params.navName = itemInnerTxt;
 				params.context = "Nav Bar";
+				params.originUrl = location.href;
+				params.destinationUrl = href;
+
+				params.url = null;
+				params.referrerURL = null;
 			} else if (itemParent.classList.contains("subSectionPageRender")) {
 				eventType = "subSectionClick";
-				params.navParent = itemSParentTxt;
+				params.sectionName = itemSParentTxt; // reviously known as navParent
 				params.navName = itemInnerTxt;
 				params.context = "Nav Bar";
+				params.originUrl = location.href;
+				params.destinationUrl = href;
+
+				params.url = null;
+				params.referrerURL = null;
 			} else if (itemParent.classList.contains("chartPageRender")) {
 				eventType = "chartNavClick";
 				params.chartTitle = itemInnerTxt;
 				params.context = "Nav Bar";
+				params.originUrl = location.href;
+				params.destinationUrl = href;
+
+				params.url = null;
+				params.referrerURL = null;
 			}
 
 			dataLayer.push({
@@ -234,6 +268,10 @@ if (articles.length) {
 				params.clickedElement = "read more";
 			}
 
+			params.originUrl = location.href;
+			params.url = null;
+			params.referrerURL = null;
+
 			// section location
 			params.context = currentMenuItemTxt;
 
@@ -259,8 +297,16 @@ if (siteSearchIcon !== null) {
 		if (location.search.indexOf("?s=") === 0) {
 			params.context = "Search page";
 		} else {
-			params.context = "Nav Bar";
+			params.context =
+				currentMenuItemTxt !== null
+					? currentMenuItemTxt
+					: currentMenuItemParentTxt;
 		}
+
+		params.originUrl = location.href;
+		params.destinationUrl = "https://myx.global/?s=";
+		params.url = null;
+		params.referrerURL = null;
 
 		dataLayer.push({
 			eventProperties: undefined,
@@ -287,6 +333,10 @@ if (voteClick !== null) {
 			params.sectionName = currentMenuItemTxt;
 		}
 
+		params.pageUrl = location.href;
+		params.url = null;
+		params.referrerURL = null;
+
 		dataLayer.push({
 			eventProperties: undefined,
 		});
@@ -307,6 +357,9 @@ if (regLinks.length) {
 			params = Object.assign({}, utm_params);
 
 			params.destinationUrl = "https://myx.global/registration/";
+			params.originUrl = location.href;
+			params.url = null;
+			params.referrerURL = null;
 
 			dataLayer.push({
 				eventProperties: undefined,
@@ -330,6 +383,11 @@ if (searchForms.length) {
 
 			let searchKey = item.querySelector("#s").value;
 			params.keyword = searchKey;
+
+			params.originUrl = location.href;
+			params.destinationUrl = "https://myx.global/?s=" + searchKey;
+			params.url = null;
+			params.referrerURL = null;
 
 			dataLayer.push({
 				eventProperties: undefined,
@@ -369,6 +427,10 @@ var voteForm = document.getElementById("form_vote8e2655ef18");
 if (voteForm !== null) {
 	voteForm.addEventListener("submit", function (event) {
 		params = Object.assign({}, utm_params);
+
+		params.pageUrl = location.href;
+		params.url = null;
+		params.referrerURL = null;
 
 		dataLayer.push({
 			eventProperties: undefined,
