@@ -6,6 +6,9 @@ if (typeof utm_params === undefined) {
 
 // common var
 var paramPageLoad = Object.assign({}, utm_params);
+paramPageLoad.url = null;
+paramPageLoad.referrerURL = null;
+
 var isLoggedIn = document.querySelector("body.logged-in");
 var mL = [
 	"January",
@@ -72,30 +75,30 @@ var eventType = null;
 // var sectionPageRender = ["", "", "", ""];
 
 var sectionPageRender = null;
+var loginForm = document.querySelector("#loginform");
 
-if (location.search.indexOf("?s=") >= 0) {
+if (location.search.indexOf("?login=failed") >= 0 && loginForm !== null) {
+	//login failed page
+	eventType = "loginErrorPageRender";
+	paramPageLoad.errorMessage =
+		loginForm.querySelector("h6") !== null
+			? loginForm.querySelector("h6").textContent
+			: "Incorrect Username or Password, try again!!";
+	paramPageLoad.pageUrl = location.href;
+} else if (location.search.indexOf("?s=") >= 0) {
 	//search page
 	eventType = "searchPageRender";
 	paramPageLoad.keyword = location.search.replace("?s=", "");
 	paramPageLoad.originUrl = document.referrer;
 	paramPageLoad.pageUrl = location.href;
-
-	paramPageLoad.url = null;
-	paramPageLoad.referrerURL = null;
 } else if (location.pathname === "/") {
 	// home page
 	eventType = "homePageRender";
-
-	paramPageLoad.url = null;
-	paramPageLoad.referrerURL = null;
 } else if (location.pathname === "/registration/") {
 	// reg page
 	eventType = "registrationPageRender";
 	paramPageLoad.destinationUrl = "https://myx.global/registration/";
 	paramPageLoad.originUrl = document.referrer;
-
-	paramPageLoad.url = null;
-	paramPageLoad.referrerURL = null;
 } else {
 	sectionPageRender = document.querySelector(
 		".gtm.sectionPageRender.current_page_item"
@@ -105,8 +108,6 @@ if (location.search.indexOf("?s=") >= 0) {
 		eventType = "sectionPageRender";
 		paramPageLoad.sectionName = currentMenuItemTxt;
 		paramPageLoad.pageUrl = location.href;
-		paramPageLoad.url = null;
-		paramPageLoad.referrerURL = null;
 	} else {
 		subSectionPageRender = document.querySelector(
 			".gtm.subSectionPageRender.current_page_item"
@@ -117,8 +118,6 @@ if (location.search.indexOf("?s=") >= 0) {
 			paramPageLoad.sectionName = currentMenuItemParentTxt;
 			paramPageLoad.subSectionName = currentMenuItemTxt;
 			paramPageLoad.pageUrl = location.href;
-			paramPageLoad.url = null;
-			paramPageLoad.referrerURL = null;
 		} else {
 			chartPageRender = document.querySelector(
 				".gtm.chartPageRender.current_page_item"
@@ -142,7 +141,7 @@ if (location.search.indexOf("?s=") >= 0) {
 						) + 1
 					);
 
-					paramPageLoad.hitChartDate = chartData[1];
+					paramPageLoad.hitChartDateDuration = chartData[1];
 					paramPageLoad.hitChartMonth =
 						hitChartMonth !== null
 							? hitChartMonth.toString()
@@ -153,6 +152,7 @@ if (location.search.indexOf("?s=") >= 0) {
 				// chart pages
 				eventType = "chartPageRender";
 				paramPageLoad.chartTitle = currentMenuItemTxt;
+				paramPageLoad.pageUrl = location.href;
 			} else {
 				articlePageRender = document.querySelector("body.single-post");
 				if (articlePageRender !== null) {
@@ -162,7 +162,10 @@ if (location.search.indexOf("?s=") >= 0) {
 					paramPageLoad.articleTitle = metaPostTitle;
 					paramPageLoad.author = metaPostAuthor;
 					paramPageLoad.pageUrl = location.href;
-					paramPageLoad.publishedDate = metaPostMDate;
+					paramPageLoad.publishedDate = metaPostMDate.substring(
+						0,
+						10
+					);
 					paramPageLoad.publishedMonth = metaPostMDate.substring(
 						5,
 						7
@@ -184,7 +187,41 @@ if (eventType !== null) {
 	});
 }
 
+// ===== Submit events - login form
+var loginForm = document.getElementById("loginform");
+if (loginForm !== null) {
+	loginForm.addEventListener("submit", function (event) {
+		localStorage.setItem("loginFormSubmited", "true");
+		return false;
+	});
+}
+
 var params = {};
+
+// login success
+if (
+	document.body.classList.contains("logged-in") &&
+	localStorage.getItem("loginFormSubmited") === "true"
+) {
+	localStorage.removeItem("loginFormSubmited");
+
+	params = Object.assign({}, utm_params);
+	params.originUrl = document.referrer;
+	params.pageUrl = location.href;
+	params.url = null;
+	params.referrerURL = null;
+
+	dataLayer.push({
+		eventProperties: undefined,
+	});
+
+	dataLayer.push({
+		event: "logEvent",
+		eventType: "loginSubmit",
+		eventProperties: params,
+	});
+}
+
 // ===== Clicks events - sections
 var allSecItems = document.querySelectorAll("#menu-main-menu-1 .gtm>a");
 if (allSecItems.length) {
@@ -197,40 +234,32 @@ if (allSecItems.length) {
 			let itemSParent = itemParent.closest(".menu-item-has-children");
 			let itemSParentTxt = null;
 			let href = item.getAttribute("href");
+			console.log("e");
+			console.log(href);
 			if (itemSParent !== null) {
 				itemSParentTxt = itemSParent.querySelector("a").textContent;
 			}
 
 			let itemInnerTxt = item.textContent;
 
+			params.url = null;
+			params.referrerURL = null;
+			params.originUrl = location.href;
+			params.destinationUrl = href;
+
 			if (itemParent.classList.contains("sectionPageRender")) {
 				eventType = "sectionClick";
 				params.navName = itemInnerTxt;
 				params.context = "Nav Bar";
-				params.originUrl = location.href;
-				params.destinationUrl = href;
-
-				params.url = null;
-				params.referrerURL = null;
 			} else if (itemParent.classList.contains("subSectionPageRender")) {
 				eventType = "subSectionClick";
 				params.sectionName = itemSParentTxt; // reviously known as navParent
 				params.navName = itemInnerTxt;
 				params.context = "Nav Bar";
-				params.originUrl = location.href;
-				params.destinationUrl = href;
-
-				params.url = null;
-				params.referrerURL = null;
 			} else if (itemParent.classList.contains("chartPageRender")) {
 				eventType = "chartNavClick";
 				params.chartTitle = itemInnerTxt;
 				params.context = "Nav Bar";
-				params.originUrl = location.href;
-				params.destinationUrl = href;
-
-				params.url = null;
-				params.referrerURL = null;
 			}
 
 			dataLayer.push({
@@ -304,7 +333,6 @@ if (siteSearchIcon !== null) {
 		}
 
 		params.originUrl = location.href;
-		params.destinationUrl = "https://myx.global/?s=";
 		params.url = null;
 		params.referrerURL = null;
 
@@ -403,25 +431,6 @@ if (searchForms.length) {
 	});
 }
 
-// ===== Submit events - login form
-var loginForm = document.getElementById("loginform");
-if (loginForm !== null) {
-	console.log("login form loaded");
-	loginForm.addEventListener("submit", function (event) {
-		params = Object.assign({}, utm_params);
-
-		dataLayer.push({
-			eventProperties: undefined,
-		});
-
-		dataLayer.push({
-			event: "logEvent",
-			eventType: "loginSubmit",
-			eventProperties: params,
-		});
-		return false;
-	});
-}
 // ===== Submit events - vote form
 var voteForm = document.getElementById("form_vote8e2655ef18");
 if (voteForm !== null) {
@@ -533,19 +542,23 @@ if (regForm !== null) {
 			); */
 			var params = Object.assign({}, utm_params);
 
+			params.pageUrl = location.href;
+			params.url = null;
+			params.referrerURL = null;
+
 			dataLayer.push({
 				eventProperties: undefined,
+			});
+
+			dataLayer.push({
+				event: "setUserProperties",
+				userProperties: { birthYear: bithday, gender: gender },
 			});
 
 			dataLayer.push({
 				event: "logEvent",
 				eventType: "registrationSubmit",
 				eventProperties: params,
-			});
-
-			dataLayer.push({
-				event: "setUserProperties",
-				userProperties: { birthYear: bithday, gender: gender },
 			});
 		}
 
